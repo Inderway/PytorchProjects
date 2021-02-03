@@ -12,10 +12,10 @@ x_np = torch.from_numpy(np_array)
 
 # from another tensors
 x_ones = torch.ones_like(x_data)  # retain the properties of x_data (rows,columns...not values)
-# print(f"Ones Tensor:\n{x_ones} \n") #f means format
+print(f"Ones Tensor:\n{x_ones} \n") # f means format
 
 x_rand = torch.rand_like(x_data, dtype=torch.float)  # override the datatype of x_data
-# print(f"Random Tensor:\n{x_rand}\n")
+print(f"Random Tensor:\n{x_rand}\n")
 
 # with random or constant values
 shape = (2, 3,)  # mean 2x3 matrix
@@ -23,16 +23,16 @@ rand_tensor = torch.rand(shape)
 ones_tensor = torch.ones(shape)
 zeros_tensor = torch.zeros(shape)
 
-# print(f"Random Tensor:\n{rand_tensor} \n")
-# print(f"Ones Tensor:\n{ones_tensor} \n")
-# print(f"Zeros Tensor:\n{zeros_tensor} \n")
+print(f"Random Tensor:\n{rand_tensor} \n")
+print(f"Ones Tensor:\n{ones_tensor} \n")
+print(f"Zeros Tensor:\n{zeros_tensor} \n")
 
 # -------------attributes
 tensor = torch.rand(3, 4)
 
-# print(f"Shape of tensor: {tensor.shape}")
-# print(f"Datatype of tensor: {tensor.dtype}")
-# print(f"Device tensor is stored on: {tensor.device}")
+print(f"Shape of tensor: {tensor.shape}")
+print(f"Datatype of tensor: {tensor.dtype}")
+print(f"Device tensor is stored on: {tensor.device}")
 
 # ---------------operations
 # assign column1 to 0
@@ -46,17 +46,17 @@ if torch.cuda.is_available():
 
 # concatenate
 t1 = torch.cat([tensor, tensor, tensor], dim=1)  # given dimension=1
-# print(t1)
+print(t1)
 
 # multiplying
-# print(f"tensor.mul(tensor)\n {tensor.mul(tensor)}\n") #element-wise product z[i][j]=x[i][j]*y[i][j]
-# print(f"tensor * tensor\n {tensor*tensor}\n") #simple
-# print(f"tensor.matmul(tensor.T)\n {tensor.matmul(tensor.T)}\n") #matrix multiplication
-# print(f"tensor @ tensor\n {tensor@tensor.T}\n")
+print(f"tensor.mul(tensor)\n {tensor.mul(tensor)}\n") # element-wise product z[i][j]=x[i][j]*y[i][j]
+print(f"tensor * tensor\n {tensor*tensor}\n") # simple
+print(f"tensor.matmul(tensor.T)\n {tensor.matmul(tensor.T)}\n") # matrix multiplication
+print(f"tensor @ tensor\n {tensor@tensor.T}\n")
 
 # in-place operation
 tensor.add_(5)  # use suffix to mean in-place, this will change the tensor
-# print(tensor)
+print(tensor)
 
 # -----------------bridge with numpy
 # tensor to Numpy
