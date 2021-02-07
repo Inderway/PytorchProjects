@@ -1,3 +1,10 @@
 <component name="ProjectDictionaryState">
-  <dictionary name="hp" />
+  <dictionary name="hp">
+    <words>
+      <w>backpropagate</w>
+      <w>conv</w>
+      <w>optim</w>
+      <w>resnet</w>
+    </words>
+  </dictionary>
 </component>
