@@ -1,10 +1,23 @@
 <component name="ProjectDictionaryState">
+<<<<<<< HEAD
   <dictionary name="hp">
     <words>
       <w>backpropagate</w>
       <w>conv</w>
+      <w>cuda</w>
+      <w>cumsum</w>
+      <w>initrange</w>
+      <w>iters</w>
+      <w>mins</w>
+      <w>ngrams</w>
       <w>optim</w>
       <w>resnet</w>
+      <w>softmax</w>
+      <w>splittext</w>
+      <w>topk</w>
     </words>
   </dictionary>
+=======
+  <dictionary name="hp" />
+>>>>>>> parent of 8ec3d75 (u)
 </component>
