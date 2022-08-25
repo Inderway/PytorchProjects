@@ -1,0 +1,54 @@
+# -*- coding=utf8 -*-
+# Aug 25, 2022
+# Created by Wei Yin
+# data loader of transformer
+
+from genericpath import exists
+import math
+import torchtext
+import torch
+import torch.nn as nn
+from torchtext.data.utils import get_tokenizer
+from collections import Counter
+from torchtext.vocab import vocab
+from torchtext.utils import download_from_url, extract_archive
+from torch import Tensor
+import io
+import os
+import time
+
+torch.manual_seed(0)
+torch.use_deterministic_algorithms(True)
+
+current_path=os.getcwd()+'\\transformer\\'
+train_filepaths = ["data\\train\\train.de", "data\\train\\train.en"]
+val_filepaths=["data\\val\\val.de","data\\val\\val.en"]
+test_filepaths = ["data\\test\\test_2016_flickr.de","data\\test\\test_2016_flickr.en"]
+
+de_tokenizer = get_tokenizer('spacy', language='de_core_news_sm')
+en_tokenizer = get_tokenizer('spacy', language='en_core_web_sm')
+
+def build_vocab(filepath, tokenizer):
+    """
+    return: Vocab (word, index)
+    """
+    # hash list, save the count of each elements
+    counter = Counter()
+    with io.open(filepath, encoding="utf8") as f:
+        for string_ in f:
+            counter.update(tokenizer(string_))
+    return vocab(counter, specials=['<unk>', '<pad>', '<bos>', '<eos>'])
+
+
+def get_vocab():
+    vocab_path=current_path+"vocab.pt"
+    if not exists(vocab_path):
+        de_vocab = build_vocab(current_path+train_filepaths[0], de_tokenizer)
+        en_vocab = build_vocab(current_path+train_filepaths[1], en_tokenizer)
+        torch.save((de_vocab, en_vocab),vocab_path)
+    else:
+        de_vocab, en_vocab=torch.load(vocab_path)
+    return (de_vocab, en_vocab)
+
+de_vocab, en_vocab=get_vocab()
+print("Size of Deutsch Vocabulary: %d\nSize of English Vocabulary: %d"%(len(de_vocab),len(en_vocab)))

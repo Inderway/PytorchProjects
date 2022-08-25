@@ -121,7 +121,7 @@ venv.bak/
 .dmypy.json
 dmypy.json
 .data/
-data/
+/**/data
 paras/
 /**/.vscode
 /**/.vs
