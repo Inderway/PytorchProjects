@@ -123,6 +123,17 @@ dmypy.json
 .data/
 data/
 paras/
+/**/.vscode
+/**/.vs
+/**/Debug
+/**/*.sln
+/**/*.vcxproj
+/**/*.filter
+/**/*.filters
+/**/*.user
+/**/[~]*
+/**/[.~]*
+.idea
 
 # Pyre type checker
 .pyre/
