@@ -133,6 +133,7 @@ paras/
 /**/*.user
 /**/[~]*
 /**/[.~]*
+/**/*.pt
 .idea
 
 # Pyre type checker

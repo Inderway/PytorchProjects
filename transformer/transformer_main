@@ -5,7 +5,7 @@
 
 from genericpath import exists
 import math
-import torchtext
+import time
 import torch
 import torch.nn as nn
 from torchtext.data.utils import get_tokenizer
@@ -17,7 +17,7 @@ from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader
 from torch import Tensor
 torch.manual_seed(0)
-torch.use_deterministic_algorithms(True)
+#torch.use_deterministic_algorithms(True)
 
 #================Data Loader===============
 current_path=os.getcwd()+'\\transformer\\'
@@ -74,7 +74,6 @@ def data_process(filepaths):
 train_data = data_process(train_filepaths)
 val_data = data_process(val_filepaths)
 test_data = data_process(test_filepaths)
-DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 BATCH_SIZE = 128
 PAD_IDX = de_vocab['<pad>']
@@ -181,6 +180,7 @@ def generate_square_subsequent_mask(sz):
     Used to mask target sentence
     """
     mask = (torch.triu(torch.ones((sz, sz), device=DEVICE)) == 1).transpose(0, 1)
+    # -infinity, the related attention will then become low
     mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
     return mask
 
@@ -206,3 +206,122 @@ BATCH_SIZE = 128
 NUM_ENCODER_LAYERS = 3
 NUM_DECODER_LAYERS = 3
 NUM_EPOCHS = 16
+
+DEVICE = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+
+# load model
+transformer = Seq2SeqTransformer(NUM_ENCODER_LAYERS, NUM_DECODER_LAYERS,
+                                 EMB_SIZE, SRC_VOCAB_SIZE, TGT_VOCAB_SIZE,
+                                 FFN_HID_DIM)
+
+# initialize the parameter
+for p in transformer.parameters():
+    if p.dim() > 1:
+        nn.init.xavier_uniform_(p)
+
+# to gpu
+transformer = transformer.to(device)
+
+loss_fn = torch.nn.CrossEntropyLoss(ignore_index=PAD_IDX)
+
+optimizer = torch.optim.Adam(
+    transformer.parameters(), lr=0.0001, betas=(0.9, 0.98), eps=1e-9
+)
+
+def train_epoch(model, train_iter, optimizer):
+    """
+    return the mean loss of all batches
+    """
+    # to train mode
+    model.train()
+    losses = 0
+    # get data in a batch
+    for _, (src, tgt) in enumerate(train_iter):
+        # shape of src: max_len x batch_size
+        #transfer data to gpu
+        src = src.to(device)
+        tgt = tgt.to(device)
+
+        tgt_input = tgt[:-1, :]
+
+        src_mask, tgt_mask, src_padding_mask, tgt_padding_mask = create_mask(src, tgt_input)
+        #shape of logits: max_len x batch_size x vocab_size
+        logits = model(src, tgt_input, src_mask, tgt_mask,
+                                    src_padding_mask, tgt_padding_mask, src_padding_mask)
+        # initialize optimizer
+        optimizer.zero_grad()
+        # remove the first token in each sentence 
+        tgt_out = tgt[1:,:]
+        # each vocab_size tensor is related to a golden label in tgt_out
+        # get the mean loss
+        loss = loss_fn(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))
+        loss.backward()
+        optimizer.step()
+        losses += loss.item()
+    return losses / len(train_iter)
+
+
+def evaluate(model, val_iter):
+    model.eval()
+    losses = 0
+    for _, (src, tgt) in (enumerate(valid_iter)):
+        src = src.to(device)
+        tgt = tgt.to(device)
+        # remove the last token in each sentence
+        tgt_input = tgt[:-1, :]
+
+        src_mask, tgt_mask, src_padding_mask, tgt_padding_mask = create_mask(src, tgt_input)
+
+        logits = model(src, tgt_input, src_mask, tgt_mask,
+                                src_padding_mask, tgt_padding_mask, src_padding_mask)
+        tgt_out = tgt[1:,:]
+        loss = loss_fn(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))
+        losses += loss.item()
+    return losses / len(val_iter)
+
+for epoch in range(1, NUM_EPOCHS+1):
+    start_time = time.time()
+    train_loss = train_epoch(transformer, train_iter, optimizer)
+    end_time = time.time()
+    val_loss = evaluate(transformer, valid_iter)
+    print((f"Epoch: {epoch}, Train loss: {train_loss:.3f}, Val loss: {val_loss:.3f}, "
+            f"Epoch time = {(end_time - start_time):.3f}s"))
+
+
+# ==========================test=========================
+def greedy_decode(model, src, src_mask, max_len, start_symbol):
+    src = src.to(device)
+    src_mask = src_mask.to(device)
+
+    memory = model.encode(src, src_mask)
+    ys = torch.ones(1, 1).fill_(start_symbol).type(torch.long).to(device)
+    for i in range(max_len-1):
+        memory = memory.to(device)
+        memory_mask = torch.zeros(ys.shape[0], memory.shape[0]).to(device).type(torch.bool)
+        tgt_mask = (generate_square_subsequent_mask(ys.size(0))
+                                    .type(torch.bool)).to(device)
+        out = model.decode(ys, memory, tgt_mask)
+        out = out.transpose(0, 1)
+        prob = model.generator(out[:, -1])
+        _, next_word = torch.max(prob, dim = 1)
+        next_word = next_word.item()
+
+        ys = torch.cat([ys,
+                        torch.ones(1, 1).type_as(src.data).fill_(next_word)], dim=0)
+        if next_word == EOS_IDX:
+            break
+    return ys
+
+
+def translate(model, src, src_vocab, tgt_vocab, src_tokenizer):
+    model.eval()
+    tokens = [BOS_IDX] + [src_vocab.get_stoi()[tok] for tok in src_tokenizer(src)]+ [EOS_IDX]
+    num_tokens = len(tokens)
+    src = (torch.LongTensor(tokens).reshape(num_tokens, 1) )
+    src_mask = (torch.zeros(num_tokens, num_tokens)).type(torch.bool)
+    # to 1-dim tensor
+    tgt_tokens = greedy_decode(model,  src, src_mask, max_len=num_tokens + 5, start_symbol=BOS_IDX).flatten()
+    return " ".join([tgt_vocab.get_itos()[tok] for tok in tgt_tokens]).replace("<bos>", "").replace("<eos>", "")
+
+
+print(translate(transformer, "Eine Gruppe von Menschen steht vor einem Iglu .", de_vocab, en_vocab, de_tokenizer))
